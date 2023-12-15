@@ -53,4 +53,153 @@ if page == "Data Overview":
 
     if st.checkbox("Shape"):
         # st.write(f"The shape is {df.shape}")
-        st.write(f"There are {df.shape[0]} rows and {df.shape[1]} columns.")
+        st.write(f"There are {df.shape[0]} rows (Customers) and {df.shape[1]} columns (Reports on Flight).")
+
+
+# Build EDA page
+if page == "EDA":
+    st.title(":bar_chart: EDA")
+    num_cols = df.select_dtypes(include = 'number').columns.tolist()
+    obj_cols = df.select_dtypes(include = 'object').columns.tolist()
+
+    eda_type = st.multiselect("What type of EDA are you interested in exploring?",
+                              ['Histograms', 'Box Plots', 'Scatterplots', 'Countplots'])
+    
+    # HISTOGRAMS
+    if "Histograms" in eda_type:
+        st.subheader("Histograms - Visualizing Numerical Distributions")
+        h_selected_col = st.selectbox("Select a numerical column for your histogram:", num_cols, index = None)
+
+        if h_selected_col:
+            chart_title = f"Distribution of {' '.join(h_selected_col.split('_')).title()}"
+            if st.toggle("Satisfaction Hue on Histogram"):
+                st.plotly_chart(px.histogram(df, x = h_selected_col, title = chart_title, color = 'satisfaction', barmode = 'overlay'))
+            else: 
+                st.plotly_chart(px.histogram(df, x = h_selected_col, title = chart_title))
+
+
+    # BOXPLOTS
+    if "Box Plots" in eda_type:
+        st.subheader("Boxplots Visualizing Numerical Distribtutions")
+        b_selected_col = st.selectbox("Select a numerical column for your box plot:", num_cols, index = None)
+       
+        if b_selected_col:           
+            chart_title = f"Distribution of {' '.join(b_selected_col.split('_')).title()}"
+            if st.toggle("Satisfaction Hue on Box Plot"):
+                st.plotly_chart(px.box(df, x = b_selected_col, y = 'satisfaction', title = chart_title, color = 'satisfaction'))
+            else:
+                st.plotly_chart(px.box(df, x = b_selected_col, title = chart_title))
+                
+
+
+    # SCATTERPLOTS
+    if "Scatterplots" in eda_type:
+        st.subheader("Visualizing Relationships")
+
+        selected_col_x = st.selectbox("Select x-axis variable:", num_cols, index = None)
+        selected_col_y = st.selectbox("Select y-axis variable:", num_cols, index = None)
+
+        
+
+        if selected_col_x and selected_col_y:
+            chart_title = f"Relationship of {' '.join(selected_col_x.split('_')).title()} vs. {' '.join(selected_col_y.split('_')).title()}"
+
+            if st.toggle("Satisfaction Hue on Scatterplot"):
+                st.plotly_chart(px.scatter(df, x = selected_col_x, y = selected_col_y, title = chart_title, color = 'satisfaction'))
+            else: 
+                st.plotly_chart(px.scatter(df, x = selected_col_x, y = selected_col_y, title = chart_title))
+
+
+
+# Building our Modeling page
+
+if page == "Modeling":
+    st.title(":gear: Modeling")
+    st.markdown("On this page, you can see how well different **machine learning models** make predictions on airline satisfaction!")
+
+    # Set up X and y
+    features = ['Class', 'Departure Delay in Minutes', 'Ease of Online booking', 'Flight Distance', 'Seat comfort', 'Inflight entertainment', 'Cleanliness']
+    X = df[features]
+    y = df['satisfaction']
+
+    # Train test split
+    X_train, X_test, y_train, y_test = train_test_split(X, y, random_state = 42)
+
+    # Model selection
+    model_option = st.selectbox("Select a Model", ['KNN', 'Logistic Regression', 'Random Forest'], index = None)
+
+    if model_option:
+        # st.write(f"You selected {model_option}")
+
+        if model_option == 'KNN':
+            k_value = st.slider("Select the number of neighers (k)", 1, 29, 5, 2)
+            model = KNeighborsClassifier(n_neighbors = k_value)
+        elif model_option == 'Logistic Regression':
+            model = LogisticRegression()
+        elif model_option == 'Random Forest':
+            model = RandomForestClassifier()
+
+        
+        if st.button("Let's see the performance!"):
+            model.fit(X_train, y_train)
+
+            # Display Results
+            st.subheader(f"{model} Evaluation")
+            st.text(f"Training Accuracy: {round(model.score(X_train, y_train)*100, 2)}%")
+            st.text(f"Testing Accuracy: {round(model.score(X_test, y_test)*100, 2)}%")
+
+            # Confusion Matrix
+            st.subheader("Confusion Matrix")
+            ConfusionMatrixDisplay.from_estimator(model, X_test, y_test, cmap = 'Blues')
+            st.pyplot()
+
+
+# Predictions Page
+if page == "Make Predictions!":
+    st.title(":rocket: Make Predictions on Airline Satisfaction Dataset")
+
+    # Create sliders for user to input data
+    st.subheader("Adjust the sliders to input data:")
+
+    d_d = st.slider("Departure Delay in Minutes", 0.0, 1600.0, 0.0, 1.0)
+    e_b = st.slider("Ease of Online booking", 0.0, 5.0, 0.0, 1.0)
+    f_d = st.slider("Flight Distance", 0.0, 3500.0, 0.0, 5.0)
+    s_c = st.slider("Seat comfort", 0.0, 5.0, 0.0, 1.0)
+    i_e = st.slider("Inflight entertainment", 0.0, 5.0, 0.0, 1.0)
+    c_c = st.slider("Cleanliness", 0.0, 5.0, 0.0, 1.0)
+
+    # Your features must be in order that the model was trained on
+    user_input = pd.DataFrame({
+            'Departure Delay in Minutes': [d_d],
+            'Ease of Online booking': [e_b],
+            'Flight Distance': [f_d],
+            'Seat comfort': [s_c],
+            'Inflight entertainment': [i_e],
+            'Cleanliness': [c_c]
+            })
+
+    # Check out "pickling" to learn how we can "save" a model
+    # and avoid the need to refit again!
+    features = ['Departure Delay in Minutes', 'Ease of Online booking', 'Flight Distance', 'Seat comfort', 'Inflight entertainment', 'Cleanliness']
+    X = df[features]
+    y = df['satisfaction']
+
+    # Model Selection
+    model_option = st.selectbox("Select a Model", ["KNN", "Logistic Regression", "Random Forest"], index = None)
+
+    if model_option:
+
+        # Instantiating & fitting selected model
+        if model_option == "KNN":
+            k_value = st.slider("Select the number of neighbors (k)", 1, 21, 5, 2)
+            model = KNeighborsClassifier(n_neighbors=k_value)
+        elif model_option == "Logistic Regression":
+            model = LogisticRegression()
+        elif model_option == "Random Forest":
+            model = RandomForestClassifier()
+        
+        if st.button("Make a Prediction!"):
+            model.fit(X, y)
+            prediction = model.predict(user_input)
+            st.write(f"{model} predicts you will be {prediction[0]}!")
+            st.balloons()
