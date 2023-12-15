@@ -14,9 +14,10 @@ st.set_option('deprecation.showPyplotGlobalUse', False)
 st.set_page_config(page_title = "Airline Satisfaction Dataset Explorer", page_icon = ":airplane:")
 
 # Sidebar navigation
-page = st.sidebar.selectbox("Select a Page", ["Home", "Data Overview", "EDA", "Modeling", "Make Predictions!", "Extras"])
+page = st.sidebar.selectbox("Select a Page", ["Home", "Data Overview", "EDA", "Modeling", "Make Predictions!"])
 
-df = pd.read_csv('data/train.csv')
+df_train = pd.read_csv('data/cleaned_train.csv')
+df_test = pd.read_csv('data/cleaned_test.csv')
 
 # Build a homepage
 if page == "Home":
@@ -40,27 +41,27 @@ if page == "Data Overview":
 
     # Display dataset
     if st.checkbox("DataFrame"):
-        st.dataframe(df)
+        st.dataframe(df_train)
 
     # Column list
     if st.checkbox("Column List"):
-        st.code(f"Columns: {df.columns.tolist()}")
+        st.code(f"Columns: {df_train.columns.tolist()}")
 
         if st.toggle('Further breakdown of columns'):
-            num_cols = df.select_dtypes(include = 'number').columns.tolist()
-            obj_cols = df.select_dtypes(include = 'object').columns.tolist()
+            num_cols = df_train.select_dtypes(include = 'number').columns.tolist()
+            obj_cols = df_train.select_dtypes(include = 'object').columns.tolist()
             st.code(f"Numerical Columns: {num_cols} \nObject Columns{obj_cols}")
 
     if st.checkbox("Shape"):
         # st.write(f"The shape is {df.shape}")
-        st.write(f"There are {df.shape[0]} rows (Customers) and {df.shape[1]} columns (Reports on Flight).")
+        st.write(f"There are {df_train.shape[0]} rows (Customers) and {df_train.shape[1]} columns (Flight Information).")
 
 
 # Build EDA page
 if page == "EDA":
     st.title(":bar_chart: EDA")
-    num_cols = df.select_dtypes(include = 'number').columns.tolist()
-    obj_cols = df.select_dtypes(include = 'object').columns.tolist()
+    num_cols = df_train.select_dtypes(include = 'number').columns.tolist()
+    obj_cols = df_train.select_dtypes(include = 'object').columns.tolist()
 
     eda_type = st.multiselect("What type of EDA are you interested in exploring?",
                               ['Histograms', 'Box Plots', 'Scatterplots', 'Countplots'])
@@ -73,9 +74,9 @@ if page == "EDA":
         if h_selected_col:
             chart_title = f"Distribution of {' '.join(h_selected_col.split('_')).title()}"
             if st.toggle("Satisfaction Hue on Histogram"):
-                st.plotly_chart(px.histogram(df, x = h_selected_col, title = chart_title, color = 'satisfaction', barmode = 'overlay'))
+                st.plotly_chart(px.histogram(df_train, x = h_selected_col, title = chart_title, color = 'satisfaction', barmode = 'overlay'))
             else: 
-                st.plotly_chart(px.histogram(df, x = h_selected_col, title = chart_title))
+                st.plotly_chart(px.histogram(df_train, x = h_selected_col, title = chart_title))
 
 
     # BOXPLOTS
@@ -86,9 +87,9 @@ if page == "EDA":
         if b_selected_col:           
             chart_title = f"Distribution of {' '.join(b_selected_col.split('_')).title()}"
             if st.toggle("Satisfaction Hue on Box Plot"):
-                st.plotly_chart(px.box(df, x = b_selected_col, y = 'satisfaction', title = chart_title, color = 'satisfaction'))
+                st.plotly_chart(px.box(df_train, x = b_selected_col, y = 'satisfaction', title = chart_title, color = 'satisfaction'))
             else:
-                st.plotly_chart(px.box(df, x = b_selected_col, title = chart_title))
+                st.plotly_chart(px.box(df_train, x = b_selected_col, title = chart_title))
                 
 
 
@@ -105,9 +106,9 @@ if page == "EDA":
             chart_title = f"Relationship of {' '.join(selected_col_x.split('_')).title()} vs. {' '.join(selected_col_y.split('_')).title()}"
 
             if st.toggle("Satisfaction Hue on Scatterplot"):
-                st.plotly_chart(px.scatter(df, x = selected_col_x, y = selected_col_y, title = chart_title, color = 'satisfaction'))
+                st.plotly_chart(px.scatter(df_train, x = selected_col_x, y = selected_col_y, title = chart_title, color = 'satisfaction'))
             else: 
-                st.plotly_chart(px.scatter(df, x = selected_col_x, y = selected_col_y, title = chart_title))
+                st.plotly_chart(px.scatter(df_train, x = selected_col_x, y = selected_col_y, title = chart_title))
 
 
 
@@ -118,9 +119,9 @@ if page == "Modeling":
     st.markdown("On this page, you can see how well different **machine learning models** make predictions on airline satisfaction!")
 
     # Set up X and y
-    features = ['Class', 'Departure Delay in Minutes', 'Ease of Online booking', 'Flight Distance', 'Seat comfort', 'Inflight entertainment', 'Cleanliness']
-    X = df[features]
-    y = df['satisfaction']
+    features = ['class', 'departure_delay_in_minutes', 'ease_of_online_booking', 'flight_distance', 'seat_comfort', 'inflight_entertainment', 'cleanliness']
+    X = df_train[features]
+    y = df_train['satisfaction']
 
     # Train test split
     X_train, X_test, y_train, y_test = train_test_split(X, y, random_state = 42)
@@ -161,28 +162,30 @@ if page == "Make Predictions!":
     # Create sliders for user to input data
     st.subheader("Adjust the sliders to input data:")
 
-    d_d = st.slider("Departure Delay in Minutes", 0.0, 1600.0, 0.0, 1.0)
-    e_b = st.slider("Ease of Online booking", 0.0, 5.0, 0.0, 1.0)
-    f_d = st.slider("Flight Distance", 0.0, 3500.0, 0.0, 5.0)
-    s_c = st.slider("Seat comfort", 0.0, 5.0, 0.0, 1.0)
-    i_e = st.slider("Inflight entertainment", 0.0, 5.0, 0.0, 1.0)
-    c_c = st.slider("Cleanliness", 0.0, 5.0, 0.0, 1.0)
+    c_a = st.slider("class", 0.0, 2.0, 0.0, 1.0)
+    d_d = st.slider("departure_delay_in_minutes", 0.0, 1600.0, 0.0, 1.0)
+    e_b = st.slider("ease_of_online_booking", 0.0, 5.0, 0.0, 1.0)
+    f_d = st.slider("flight_distance", 0.0, 3500.0, 0.0, 5.0)
+    s_c = st.slider("seat_comfort", 0.0, 5.0, 0.0, 1.0)
+    i_e = st.slider("inflight_entertainment", 0.0, 5.0, 0.0, 1.0)
+    c_c = st.slider("cleanliness", 0.0, 5.0, 0.0, 1.0)
 
     # Your features must be in order that the model was trained on
     user_input = pd.DataFrame({
-            'Departure Delay in Minutes': [d_d],
-            'Ease of Online booking': [e_b],
-            'Flight Distance': [f_d],
-            'Seat comfort': [s_c],
-            'Inflight entertainment': [i_e],
-            'Cleanliness': [c_c]
+            'class': [c_a],
+            'departure_delay_in_minutes': [d_d],
+            'ease_of_online_booking': [e_b],
+            'flight_distance': [f_d],
+            'seat_comfort': [s_c],
+            'inflight_entertainment': [i_e],
+            'cleanliness': [c_c]
             })
 
     # Check out "pickling" to learn how we can "save" a model
     # and avoid the need to refit again!
-    features = ['Departure Delay in Minutes', 'Ease of Online booking', 'Flight Distance', 'Seat comfort', 'Inflight entertainment', 'Cleanliness']
-    X = df[features]
-    y = df['satisfaction']
+    features = ['class', 'departure_delay_in_minutes', 'ease_of_online_booking', 'flight_distance', 'seat_comfort', 'inflight_entertainment', 'cleanliness']
+    X = df_train[features]
+    y = df_train['satisfaction']
 
     # Model Selection
     model_option = st.selectbox("Select a Model", ["KNN", "Logistic Regression", "Random Forest"], index = None)
