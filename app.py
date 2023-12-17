@@ -19,6 +19,8 @@ page = st.sidebar.selectbox("Select a Page", ["Home", "Data Overview", "EDA", "M
 df_train = pd.read_csv('data/cleaned_train.csv')
 df_test = pd.read_csv('data/cleaned_test.csv')
 
+df_train.drop(columns=['Unnamed: 0'], inplace = True)
+
 # Build a homepage
 if page == "Home":
     st.title(":airplane: Airline Satisfaction Dataset Explorer App")
